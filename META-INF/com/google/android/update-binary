@@ -187,7 +187,7 @@ else
     ui_print ""
     ui_print "+--------------------------------------+"
     ui_print "|     Adreno 6xx Driver                |"
-    ui_print "|     OpenGL + Vulkan @615v3.7         |"
+    ui_print "|     OpenGL + Vulkan @690.0           |"
     ui_print "|     By Zen                           |"
     ui_print "+--------------------------------------+"
     ui_print ""
