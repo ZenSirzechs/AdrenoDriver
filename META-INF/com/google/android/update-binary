@@ -11,7 +11,6 @@ export TMP="/tmp"
 export OLD_DRIVER="$TMP/old_driver"
 export UPDATE_FILES="$TMP/update_files"
 export PATH="$PATH:$TMP/update_files/utils"
-
 ui_print() {
   echo "ui_print $1" > "$OUTDIR";
   echo "ui_print" > "$OUTDIR";
@@ -73,6 +72,8 @@ copy_old_driver() {
 
 
 check_vendor_space() {
+    set -e
+
     # Don't check size if we have the flag in driver name.
     if [[ "$ZIPFILE" == *"no-size-check"* ]]; then
         ui_print "Skipping size check of update files."
@@ -110,9 +111,10 @@ check_vendor_space() {
                 exit 1
             fi
         fi
-        
     fi
 }
+
+
 
 # Remove leftovers.
 remove_leftovers() {
@@ -135,11 +137,7 @@ remove_leftovers() {
 remove_cache() {
     ui_print "Removing shader caches."
     (
-        SHADERS=$(find /data/user_de -name *shaders_cache* -type f | grep code_cache)
-        for value in $SHADERS
-        do
-            rm -rf $value;
-        done
+        find /data/user_de -name '*shaders_cache*' -type f -path '*code_cache*' -delete
     )
 }
 
@@ -222,23 +220,25 @@ cd $UPDATE_FILES
 find . -type d \( -name "META-INF" -o -name "utils" \) -prune -o -type f -print0 | while IFS= read -r -d '' file; do
 # TODO: If we get an error during replacing files or can't fit it, restore original driver from vendor_files.
 
-if [[ -e "/vendor${file#.}" ]]; then
-    # We don't need to set the context again because of -P (Preserve context) flag.
-    cp -p "$UPDATE_FILES${file#.}" "/vendor${file#.}"
-else
-    mkdir "$(dirname "/vendor${file#.}")"
-    cp -p "$UPDATE_FILES${file#.}" "/vendor${file#.}"
-    case "${file#.}" in
-    firmware/*)
-        chcon u:object_r:vendor_firmware_file:s0 "/vendor${file#.}";;
-    lib/*|lib64/*)
-        chcon u:object_r:same_process_hal_file:s0 "/vendor${file#.}";;
-    esac
-fi
+    if [[ -e "/vendor${file#.}" ]]; then
+        # We don't need to set the context again because of -P (Preserve context) flag.
+        cp -p "$UPDATE_FILES${file#.}" "/vendor${file#.}"
+    else
+        mkdir "$(dirname "/vendor${file#.}")"
+        cp -p "$UPDATE_FILES${file#.}" "/vendor${file#.}"
+        case "${file#.}" in
+        firmware/*)
+            chcon u:object_r:vendor_firmware_file:s0 "/vendor${file#.}";;
+        lib/*|lib64/*)
+            chcon u:object_r:same_process_hal_file:s0 "/vendor${file#.}";;
+        esac
+    fi
+
+    # Set permission 644 on the files after copying them
+    chmod 644 "/vendor${file#.}"
 done
 
 ui_print "Installation successful."
-
 
 
 # Create Revert Package. (Subshell was causing problems so just bring it here)
